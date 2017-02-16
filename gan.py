@@ -55,7 +55,7 @@ def build_discriminator(x_data, x_generated, keep_prob):
 
 
 def show_result(batch_res, fname, grid_size=(8, 8), grid_pad=5):
-    batch_res = 0.5 * batch_res.reshape((batch_res.shape[0], img_height, img_width)) + 0.5
+    batch_res = 0.5 * batch_res.reshape((batch_res.shape[0], img_height, img_width)) + 0.5 # [-1, 1] back to [0, 1]
     img_h, img_w = batch_res.shape[1], batch_res.shape[2]
     grid_h = img_h * grid_size[0] + grid_pad * (grid_size[0] - 1)
     grid_w = img_w * grid_size[1] + grid_pad * (grid_size[1] - 1)
@@ -110,16 +110,17 @@ def train():
     z_sample_val = np.random.normal(0, 1, size=(batch_size, z_size)).astype(np.float32)
 
     for i in range(sess.run(global_step), max_epoch):
-        for j in range(60000 / batch_size):
-            print "epoch:%s, iter:%s" % (i, j)
+        for j in range(60000 // batch_size):
+            if i % 25 == 0 and j == 0:
+               print("epoch:%s, iter:%s" % (i, j))
+
             x_value, _ = mnist.train.next_batch(batch_size)
-            x_value = 2 * x_value.astype(np.float32) - 1
+            x_value = 2 * x_value.astype(np.float32) - 1 # normalize to -1 ~ 1
             z_value = np.random.normal(0, 1, size=(batch_size, z_size)).astype(np.float32)
             sess.run(d_trainer,
                      feed_dict={x_data: x_value, z_prior: z_value, keep_prob: np.sum(0.7).astype(np.float32)})
-            if j % 1 == 0:
-                sess.run(g_trainer,
-                         feed_dict={x_data: x_value, z_prior: z_value, keep_prob: np.sum(0.7).astype(np.float32)})
+            sess.run(g_trainer,
+                     feed_dict={x_data: x_value, z_prior: z_value, keep_prob: np.sum(0.7).astype(np.float32)})
         x_gen_val = sess.run(x_generated, feed_dict={z_prior: z_sample_val})
         show_result(x_gen_val, "output/sample{0}.jpg".format(i))
         z_random_sample_val = np.random.normal(0, 1, size=(batch_size, z_size)).astype(np.float32)
